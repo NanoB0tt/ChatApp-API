@@ -25,7 +25,6 @@ export class UserController {
     @Param('receiverId') receiverId: string,
     @Req() req: Request
   ): Observable<FriendRequest | { error: string }> {
-    console.log(req.user)
     return this.userService.sendFriendRequest(receiverId, req.user as User)
   }
 
@@ -45,7 +44,6 @@ export class UserController {
     @Body() statusResponse: FriendRequestStatus,
     @Req() req: Request
   ): Observable<FriendRequestStatus | { error: string }> {
-    console.log(req.user);
     return this.userService.respondToFriendRequest(statusResponse.status, friendRequestId, req.user as User);
   }
 
