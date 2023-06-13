@@ -1,18 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import * as bcrypt from 'bcrypt';
-import { from, map, Observable, switchMap } from 'rxjs';
+import { catchError, from, map, Observable, switchMap } from 'rxjs';
 import { Repository } from 'typeorm';
-import { UserEntity } from '../models/user.entity';
-import { User } from '../models/user.interface';
+import { CreateUserDto, LoginUserDto } from './dto';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private jwtService: JwtService,
   ) { }
 
@@ -20,14 +20,13 @@ export class AuthService {
     return from(bcrypt.hash(password, 12));
   }
 
-  registerAccount(user: User): Observable<User> {
-    const { firstName, lastName, email, password } = user;
+  createUser(user: CreateUserDto): Observable<User> {
+    const { userName, email, password } = user;
 
     return this.hashPassword(password).pipe(
       switchMap((hashedPassword: string) => {
         return from(this.userRepository.save({
-          firstName,
-          lastName,
+          userName,
           email,
           password: hashedPassword
         })).pipe(
@@ -37,6 +36,9 @@ export class AuthService {
           })
         );
       }),
+      catchError(err => {
+        return this.handleDBErrors(err)
+      })
     );
   }
 
@@ -45,24 +47,29 @@ export class AuthService {
       this.userRepository.findOne(
         {
           where: { email },
-          select: ['id', 'firstName', 'lastName', 'email', 'password']
+          select: { email: true, password: true }
         },
       ),
     ).pipe(
-      switchMap((user: User) =>
-        from(bcrypt.compare(password, user.password)).pipe(
+      switchMap((user: User) => {
+        if (!user)
+          throw new UnauthorizedException('not valid credentials (email)')
+        return from(bcrypt.compare(password, user.password)).pipe(
           map((isValidPassword: boolean) => {
             if (isValidPassword) {
               delete user.password;
               return user;
+            } else {
+              throw new UnauthorizedException('not valid credentials (password)')
             }
-          }),
-        ),
+          })
+        )
+      }
       ),
     );
   }
 
-  login(user: User): Observable<string> {
+  login(user: LoginUserDto): Observable<string> {
     const { email, password } = user;
     return this.validateUser(email, password).pipe(
       switchMap((user: User) => {
@@ -72,6 +79,13 @@ export class AuthService {
         }
       }),
     );
+  }
+
+  private handleDBErrors(error: any): Observable<never> {
+    if (error.code === '23505')
+      throw new BadRequestException(error.detail);
+
+    throw new InternalServerErrorException('Please check server logs');
   }
 
 }
