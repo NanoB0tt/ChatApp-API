@@ -47,7 +47,7 @@ export class AuthService {
       this.userRepository.findOne(
         {
           where: { email },
-          select: { email: true, password: true }
+          select: { email: true, password: true, userName: true, imagePath: true, id: true }
         },
       ),
     ).pipe(
@@ -69,13 +69,21 @@ export class AuthService {
     );
   }
 
-  login(user: LoginUserDto): Observable<string> {
+  login(user: LoginUserDto): Observable<User & { token: string }> {
     const { email, password } = user;
     return this.validateUser(email, password).pipe(
       switchMap((user: User) => {
         if (user) {
           // create JWT - credentials
-          return from(this.jwtService.signAsync({ user }));
+          /* return from(this.jwtService.signAsync({ user }));  */
+          return from(this.jwtService.signAsync({ id: user.id })).pipe(
+            map((token: string) => {
+              return {
+                ...user,
+                token
+              }
+            })
+          )
         }
       }),
     );

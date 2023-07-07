@@ -4,7 +4,7 @@ import { from, map, Observable, of, switchMap } from 'rxjs';
 import { FriendRequestStatus, FriendRequest_Status } from 'src/auth/dto/createFriendRequest.dto';
 import { FriendRequest } from 'src/auth/entities/friend.entity';
 import { User } from 'src/auth/entities/user.entity';
-import { Repository, UpdateResult } from 'typeorm';
+import { DataSource, Like, Repository, UpdateResult } from 'typeorm';
 
 @Injectable()
 export class UserService {
@@ -28,46 +28,11 @@ export class UserService {
     )
   }
 
-
   findUserByName(name: string): Observable<User[]> {
     return from(
       this.userRepository.find({
-        where: { userName: name },
-        select: ['id', 'userName', 'email']
-      })
-    );
-  }
-
-  updateUserImageById(id: string, imagePath: string): Observable<UpdateResult> {
-    const user: User = new User();
-    user.id = id;
-    user.imagePath = imagePath;
-    return from(this.userRepository.update(id, user));
-  }
-
-  findImageNameByUserId(id: string): Observable<string> {
-    return from(this.userRepository.findOne({
-      where: { id }
-    })).pipe(
-      map((user: User) => {
-        delete user.password;
-        return user.imagePath;
-      })
-    );
-  }
-
-  hasRequestBeenSentOrReceived(creator: User, receiver: User): Observable<boolean> {
-    return from(this.friendRepository.findOne({
-      where: [
-        { creator, receiver },
-        { creator: receiver, receiver: creator },
-      ]
-    }),
-    ).pipe(
-      switchMap((friendRequest: FriendRequest) => {
-        if (!friendRequest)
-          return of(false);
-        return of(true);
+        where: { userName: Like(`%${name}%`) },
+        select: ['id', 'userName', 'email', 'imagePath'],
       })
     );
   }
@@ -119,12 +84,6 @@ export class UserService {
     );
   }
 
-  getFriendRequestUserById(friendRequestId: string, req: User): Observable<FriendRequest> {
-    return from(this.friendRepository.findOne({
-      where: { creatorId: friendRequestId, receiverId: req.id }
-    }))
-  }
-
   respondToFriendRequest(
     statusResponse: FriendRequest_Status,
     friendRequestId: string,
@@ -143,9 +102,47 @@ export class UserService {
   getMyFriendRequests(user: User): Observable<FriendRequest[]> {
     return from(this.friendRepository.find({
       where: {
-        receiver: user
-      }
+        receiver: user,
+        status: 'pending'
+      },
+      relations: ['creator'],
+      select: ['creator', 'status']
     }))
+  }
+
+  getMyFriends(user: User): Observable<User[]> {
+    return from(this.friendRepository.find({
+      where: {
+        receiver: user,
+        status: 'accepted',
+      },
+      relations: ['creator'],
+    })).pipe(map(users => (
+      users.map(user => user.creator)
+    ))
+    )
+  }
+
+  private getFriendRequestUserById(friendRequestId: string, req: User): Observable<FriendRequest> {
+    return from(this.friendRepository.findOne({
+      where: { creatorId: friendRequestId, receiverId: req.id }
+    }))
+  }
+
+  private hasRequestBeenSentOrReceived(creator: User, receiver: User): Observable<boolean> {
+    return from(this.friendRepository.findOne({
+      where: [
+        { creator, receiver },
+        { creator: receiver, receiver: creator },
+      ]
+    }),
+    ).pipe(
+      switchMap((friendRequest: FriendRequest) => {
+        if (!friendRequest)
+          return of(false);
+        return of(true);
+      })
+    );
   }
 
 }

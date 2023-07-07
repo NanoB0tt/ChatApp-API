@@ -1,6 +1,5 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { map, Observable } from 'rxjs';
+import { Body, Controller, Post } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { AuthService } from './auth.service';
 import { CreateUserDto, LoginUserDto } from './dto';
 import { User } from './entities/user.entity';
@@ -15,14 +14,7 @@ export class AuthController {
   }
 
   @Post('login')
-  login(@Body() user: LoginUserDto): Observable<{ token: string }> {
-    return this.authService
-      .login(user)
-      .pipe(map((jwt: string) => ({ token: jwt })));
+  login(@Body() user: LoginUserDto): Observable<User & { token: string }> {
+    return this.authService.login(user)
   }
-
-  /* @Get('search') */
-  /* searchUserName(@Param('userName') userName: string): Observable<User[]> { */
-  /*   return this.authService.findUserByName(userName); */
-  /* } */
 }

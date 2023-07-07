@@ -20,6 +20,12 @@ export class UserController {
   }
 
   @UseGuards(JwtGuard)
+  @Get('search/friend/:userName')
+  findUserByName(@Param('userName') userName: string): Observable<User[]> {
+    return this.userService.findUserByName(userName);
+  }
+
+  @UseGuards(JwtGuard)
   @Post('friend-request/send/:receiverId')
   sendFriendRequest(
     @Param('receiverId') receiverId: string,
@@ -53,6 +59,14 @@ export class UserController {
     @Req() req: Request
   ): Observable<FriendRequestStatus[]> {
     return this.userService.getMyFriendRequests(req.user as User)
+  }
+
+  @UseGuards(JwtGuard)
+  @Get('friend-request/me/friends')
+  getMyFriends(
+    @Req() req: Request
+  ): Observable<User[]> {
+    return this.userService.getMyFriends(req.user as User)
   }
 
 }
