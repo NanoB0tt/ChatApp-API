@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import * as bcrypt from 'bcrypt';
-import { catchError, from, map, Observable, switchMap } from 'rxjs';
+import { catchError, from, map, Observable, of, switchMap } from 'rxjs';
 import { Repository } from 'typeorm';
 import { CreateUserDto, LoginUserDto } from './dto';
 import { User } from './entities/user.entity';
@@ -85,6 +85,17 @@ export class AuthService {
             })
           )
         }
+      }),
+    );
+  }
+
+  getJwtUser(jwt: string): Observable<User | null> {
+    return from(this.jwtService.verifyAsync(jwt)).pipe(
+      map(({ user }: { user: User }) => {
+        return user;
+      }),
+      catchError(() => {
+        return of(null);
       }),
     );
   }

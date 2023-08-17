@@ -1,4 +1,6 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Chat } from "src/chat/entities/chat.entity";
+import { Message } from "src/chat/entities/message.entity";
+import { Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { FriendRequest } from "./friend.entity";
 
 @Entity('users')
@@ -27,4 +29,9 @@ export class User {
   @OneToMany(() => FriendRequest, (friendRequest) => friendRequest.receiver)
   receivedFriendRequests: FriendRequest[];
 
+  @ManyToMany(() => Chat, (chat) => chat.users)
+  chat: Chat[];
+
+  @OneToMany(() => Message, (message) => message.user)
+  messages: Message[];
 }
