@@ -7,6 +7,7 @@ import { catchError, from, map, Observable, of, switchMap } from 'rxjs';
 import { Repository } from 'typeorm';
 import { CreateUserDto, LoginUserDto } from './dto';
 import { User } from './entities/user.entity';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -16,88 +17,63 @@ export class AuthService {
     private jwtService: JwtService,
   ) { }
 
-  hashPassword(password: string): Observable<string> {
-    return from(bcrypt.hash(password, 12));
-  }
+  async createUser(createUserDto: CreateUserDto) {
 
-  createUser(user: CreateUserDto): Observable<User> {
-    const { userName, email, password } = user;
+    try {
+      const { password, ...userData } = createUserDto;
 
-    return this.hashPassword(password).pipe(
-      switchMap((hashedPassword: string) => {
-        return from(this.userRepository.save({
-          userName,
-          email,
-          password: hashedPassword
-        })).pipe(
-          map((user: User) => {
-            delete user.password;
-            return user;
-          })
-        );
-      }),
-      catchError(err => {
-        return this.handleDBErrors(err)
-      })
-    );
-  }
+      const user = this.userRepository.create({
+        ...userData,
+        password: bcrypt.hashSync(password, 10)
+      });
 
-  validateUser(email: string, password: string): Observable<User> {
-    return from(
-      this.userRepository.findOne(
-        {
-          where: { email },
-          select: { email: true, password: true, userName: true, imagePath: true, id: true }
-        },
-      ),
-    ).pipe(
-      switchMap((user: User) => {
-        if (!user)
-          throw new UnauthorizedException('not valid credentials (email)')
-        return from(bcrypt.compare(password, user.password)).pipe(
-          map((isValidPassword: boolean) => {
-            if (isValidPassword) {
-              delete user.password;
-              return user;
-            } else {
-              throw new UnauthorizedException('not valid credentials (password)')
-            }
-          })
-        )
+      await this.userRepository.save(user);
+      delete user.password;
+
+      return {
+        ...user,
+        token: this.getJwtToken({ id: user.id })
       }
-      ),
-    );
+
+    } catch (error) {
+      this.handleDBErrors(error);
+    }
+
   }
 
-  login(user: LoginUserDto): Observable<User & { token: string }> {
-    const { email, password } = user;
-    return this.validateUser(email, password).pipe(
-      switchMap((user: User) => {
-        if (user) {
-          // create JWT - credentials
-          /* return from(this.jwtService.signAsync({ user }));  */
-          return from(this.jwtService.signAsync({ id: user.id })).pipe(
-            map((token: string) => {
-              return {
-                ...user,
-                token
-              }
-            })
-          )
-        }
-      }),
-    );
+  async login(loginUserDto: LoginUserDto) {
+
+    const { password, email } = loginUserDto;
+
+    const user = await this.userRepository.findOne({
+      where: { email },
+      select: { email: true, password: true, id: true }
+    });
+
+    if (!user)
+      throw new UnauthorizedException('Credentials are not valid (email)')
+
+    if (!bcrypt.compareSync(password, user.password))
+      throw new UnauthorizedException('Credentials are not valid (password)')
+
+    return {
+      ...user,
+      token: this.getJwtToken({ id: user.id })
+    }
   }
 
-  getJwtUser(jwt: string): Observable<User | null> {
-    return from(this.jwtService.verifyAsync(jwt)).pipe(
-      map(({ user }: { user: User }) => {
-        return user;
-      }),
-      catchError(() => {
-        return of(null);
-      }),
-    );
+  async checkAuthStatus(user: User) {
+
+    return {
+      ...user,
+      token: this.getJwtToken({ id: user.id })
+    };
+
+  }
+
+  getJwtToken(payload: JwtPayload) {
+    const token = this.jwtService.sign(payload);
+    return token;
   }
 
   private handleDBErrors(error: any): Observable<never> {
