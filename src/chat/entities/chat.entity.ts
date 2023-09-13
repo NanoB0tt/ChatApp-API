@@ -1,19 +1,11 @@
-import { User } from "src/auth/entities/user.entity";
-import { Entity, JoinTable, ManyToMany, OneToMany, PrimaryColumn, UpdateDateColumn } from "typeorm";
-import { Message } from "./message.entity";
+import { Column, Entity, PrimaryColumn } from "typeorm";
 
 @Entity('chat')
 export class Chat {
   @PrimaryColumn()
-  id: string;
+  room: string;
 
-  @ManyToMany(() => User)
-  @JoinTable()
-  users: User[];
+  @Column('json')
+  content: { message: string, from: string }[];
 
-  @OneToMany(() => Message, (message) => message.chat)
-  messages: Message[];
-
-  @UpdateDateColumn()
-  lastUpdated: Date;
 }
