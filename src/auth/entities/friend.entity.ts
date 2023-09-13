@@ -18,4 +18,7 @@ export class FriendRequest {
 
   @Column()
   status: FriendRequest_Status;
+
+  @Column('uuid', { nullable: true })
+  room: string
 }

@@ -3,7 +3,6 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import * as bcrypt from 'bcrypt';
-import { catchError, from, map, Observable, of, switchMap } from 'rxjs';
 import { Repository } from 'typeorm';
 import { CreateUserDto, LoginUserDto } from './dto';
 import { User } from './entities/user.entity';
@@ -47,7 +46,7 @@ export class AuthService {
 
     const user = await this.userRepository.findOne({
       where: { email },
-      select: { email: true, password: true, id: true }
+      select: { email: true, password: true, id: true, userName: true, imagePath: true }
     });
 
     if (!user)
@@ -71,12 +70,12 @@ export class AuthService {
 
   }
 
-  getJwtToken(payload: JwtPayload) {
+  private getJwtToken(payload: JwtPayload) {
     const token = this.jwtService.sign(payload);
     return token;
   }
 
-  private handleDBErrors(error: any): Observable<never> {
+  private handleDBErrors(error: any) {
     if (error.code === '23505')
       throw new BadRequestException(error.detail);
 
