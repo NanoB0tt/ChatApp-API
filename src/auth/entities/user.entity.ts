@@ -1,5 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { FriendRequest } from "./friend.entity";
+import { Friendship } from "./friend.entity";
 
 @Entity('users')
 export class User {
@@ -21,10 +21,10 @@ export class User {
   @Column({ nullable: true })
   imagePath: string;
 
-  @OneToMany(() => FriendRequest, (friendRequest) => friendRequest.creator)
-  sentFriendRequests: FriendRequest[];
+  @OneToMany(() => Friendship, (friendRequest) => friendRequest.creator)
+  sentFriendRequests: Friendship[];
 
-  @OneToMany(() => FriendRequest, (friendRequest) => friendRequest.receiver)
-  receivedFriendRequests: FriendRequest[];
+  @OneToMany(() => Friendship, (friendRequest) => friendRequest.receiver)
+  receivedFriendRequests: Friendship[];
 
 }
