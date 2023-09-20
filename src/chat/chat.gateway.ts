@@ -23,8 +23,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket
   ) {
     client.join(message);
-    console.log('this is the room name: ', message);
-    console.log('this are the rooms Im in: ', client.rooms);
   }
 
 
@@ -38,7 +36,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       createdAt: message.createdAt,
       from: client.handshake.auth.id
     });
-    console.log('message: ', message.message, 'to: ', message.roomId, 'from: ', client.handshake.auth.id);
   }
 
   @SubscribeMessage('invitationSend')

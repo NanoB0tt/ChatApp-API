@@ -13,7 +13,6 @@ export class ChatController {
   @UseGuards(JwtGuard)
   @Post('addMessage')
   addMessage(@Body() body: { room: string, message: string }, @Req() req: Request) {
-    console.log(body);
     const user = req.user as User
     return this.chatService.addMessage(body, user.id)
   }
