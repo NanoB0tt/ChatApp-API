@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { getChatAdapter } from './chat.adapter';
 import { Chat } from './entities/chat.entity';
 
 @Injectable()
@@ -11,30 +12,21 @@ export class ChatService {
   ) { }
 
   async addMessage({ room, message }, from: string) {
-    const chatMessage = { message, from };
-    const chatExists = await this.chatRepository.findOne({
-      where: { room }
+    const data = await this.chatRepository.save({
+      roomId: room,
+      message,
+      from
     });
-    if (chatExists) {
-      const oldChat = chatExists.content
-      return await this.chatRepository.save({
-        room,
-        content: [...oldChat, chatMessage]
-      });
-    }
-    return await this.chatRepository.save({
-      room,
-      content: [chatMessage]
-    });
+    return getChatAdapter(data)
   }
 
   async getAllMessages(room: string) {
-    return await this.chatRepository.findOne({
+    const data = await this.chatRepository.find({
       where: {
-        room
+        roomId: room
       },
-      select: ['content']
     })
+    return getChatAdapter(data)
   }
 
 }

@@ -1,11 +1,10 @@
 import { ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { User } from 'src/auth/entities/user.entity';
-import { ChatService } from './chat.service';
+import { Message } from 'src/user/interfaces/interfaces';
 
 @WebSocketGateway({ cors: true })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private readonly chatService: ChatService) { }
 
   @WebSocketServer()
   server: Server;
@@ -28,16 +27,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log('this are the rooms Im in: ', client.rooms);
   }
 
+
   @SubscribeMessage('sendMessage')
   activeConnection(
-    @MessageBody() message: { message: string, to: string },
+    @MessageBody() message: Message,
     @ConnectedSocket() client: Socket,
   ) {
-    this.server.to(message.to).emit('privateMessage', {
+    this.server.to(message.roomId).emit('privateMessage', {
       message: message.message,
+      createdAt: message.createdAt,
       from: client.handshake.auth.id
     });
-    console.log('message: ', message.message, 'to: ', message.to, 'from: ', client.handshake.auth.id);
+    console.log('message: ', message.message, 'to: ', message.roomId, 'from: ', client.handshake.auth.id);
   }
 
   @SubscribeMessage('invitationSend')
