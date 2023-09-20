@@ -1,8 +1,8 @@
 import { Body, Controller, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
-import { FriendRequestStatus } from 'src/auth/dto/createFriendRequest.dto';
 import { User } from 'src/auth/entities/user.entity';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
+import { FriendRequestStatus } from './interfaces/interfaces';
 import { UserService } from './user.service';
 
 @Controller('user')

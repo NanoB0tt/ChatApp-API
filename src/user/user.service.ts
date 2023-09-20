@@ -1,18 +1,18 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FriendRequest_Status } from 'src/auth/dto/createFriendRequest.dto';
-import { FriendRequest } from 'src/auth/entities/friend.entity';
+import { Friendship } from 'src/auth/entities/friend.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { DataSource, ILike, Repository } from 'typeorm';
 import { v4 as uuid } from 'uuid';
+import { FriendRequest, FriendRequest_Status } from './interfaces/interfaces';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(FriendRequest)
-    private readonly friendRepository: Repository<FriendRequest>,
+    @InjectRepository(Friendship)
+    private readonly friendRepository: Repository<Friendship>,
   ) { }
 
   async findUserById(id: string) {
@@ -30,23 +30,9 @@ export class UserService {
   }
 
   async findUserByName(name: string, user: User) {
-    /* const query = await this.friendRepository */
-    /*   .query(` */
-    /*          SELECT */
-    /*          "userName", "creatorId", "receiverId" */
-    /*          FROM */
-    /*          users */
-    /*          LEFT JOIN friends ON "receiverId" = users.id */
-    /*          OR "creatorId" = users.id */
-    /*          WHERE ("userName" ILIKE $1 AND "userName" != $2) */
-    /*          AND */
-    /*          (("creatorId" IS NULL OR "creatorId" != $3) AND ("receiverId" IS NULL OR "receiverId" != $3)) */
-    /*          `, [`%${name}%`, user.userName, user.id]) */
-    /* console.log(query) */
-
     const result = await this.userRepository
       .createQueryBuilder("users")
-      .leftJoinAndSelect(FriendRequest, "friends",
+      .leftJoinAndSelect(Friendship, "friends",
         `friends.receiverId = users.id
          OR
          friends.creatorId = users.id`)
@@ -81,10 +67,7 @@ export class UserService {
     let friendRequest: FriendRequest = {
       creatorId: creator.id,
       receiverId: receiver.id,
-      creator: creator,
-      receiver: receiver,
       status: 'pending',
-      room: null
     }
     return await this.friendRepository.save(friendRequest);
   }
@@ -108,19 +91,10 @@ export class UserService {
 
   async respondToFriendRequest(statusResponse: FriendRequest_Status, friendRequestId: string, req: User) {
     const friendRequest = await this.getFriendRequestUserById(friendRequestId, req);
-
-    if (statusResponse === 'accepted') {
-      return await this.friendRepository.save({
-        ...friendRequest,
-        status: statusResponse,
-        room: uuid()
-      })
-    } else {
-      return await this.friendRepository.save({
-        ...friendRequest,
-        status: statusResponse,
-      })
-    }
+    return await this.friendRepository.save({
+      ...friendRequest,
+      status: statusResponse
+    })
   }
 
   async receivedRequests(user: User) {
@@ -176,7 +150,7 @@ export class UserService {
       ],
     });
 
-    return { room: relation.room };
+    return { room: relation.id };
   }
 
   private async getFriendRequestUserById(friendRequestId: string, req: User) {
