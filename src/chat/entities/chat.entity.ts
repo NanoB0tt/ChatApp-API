@@ -1,19 +1,24 @@
-import { User } from "src/auth/entities/user.entity";
-import { Entity, JoinTable, ManyToMany, OneToMany, PrimaryColumn, UpdateDateColumn } from "typeorm";
-import { Message } from "./message.entity";
+import { Friendship } from "src/auth/entities/friend.entity";
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('chat')
 export class Chat {
-  @PrimaryColumn()
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToMany(() => User)
-  @JoinTable()
-  users: User[];
+  @Column('text')
+  message: string;
 
-  @OneToMany(() => Message, (message) => message.chat)
-  messages: Message[];
+  @Column('text')
+  from: string;
 
-  @UpdateDateColumn()
-  lastUpdated: Date;
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date;
+
+  @Column('uuid')
+  roomId: string;
+
+  @ManyToOne(() => Friendship, (friendRequest) => friendRequest.friendRooms)
+  room: Friendship;
+
 }

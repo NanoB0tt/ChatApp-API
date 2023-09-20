@@ -48,6 +48,6 @@ export class FilesController {
     const secureUrl = `${this.configService.get('HOST_API')}/files/profilePic/${file.filename}`;
     this.filesService.updateUserImageById(id, secureUrl);
 
-    return { file };
+    return { secureUrl };
   }
 }

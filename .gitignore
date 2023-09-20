@@ -7,6 +7,9 @@ postgres/
 # env files
 .env
 
+# files
+TODO.md
+
 # Logs
 logs
 *.log

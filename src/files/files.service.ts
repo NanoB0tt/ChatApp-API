@@ -2,9 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import { from, map, Observable } from 'rxjs';
 import { User } from 'src/auth/entities/user.entity';
-import { Repository, UpdateResult } from 'typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class FilesService {
@@ -23,21 +22,10 @@ export class FilesService {
     return path;
   }
 
-  updateUserImageById(id: string, imagePath: string): Observable<UpdateResult> {
+  async updateUserImageById(id: string, imagePath: string) {
     const user: User = new User();
     user.id = id;
     user.imagePath = imagePath;
-    return from(this.userRepository.update(id, user));
-  }
-
-  findImageNameByUserId(id: string): Observable<string> {
-    return from(this.userRepository.findOne({
-      where: { id }
-    })).pipe(
-      map((user: User) => {
-        delete user.password;
-        return user.imagePath;
-      })
-    );
+    return await this.userRepository.update(id, user);
   }
 }

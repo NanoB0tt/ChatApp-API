@@ -1,23 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { ChatController } from './chat.controller';
-import { ChatGateway } from './gateway/chat/chat.gateway';
-import { AuthModule } from 'src/auth/auth.module';
+import { ChatGateway } from './chat.gateway';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Message } from './entities/message.entity';
 import { Chat } from './entities/chat.entity';
-import { ActiveChat } from './entities/activeChat.entity';
+import { ChatController } from './chat.controller';
+import { Friendship } from 'src/auth/entities/friend.entity';
 
 @Module({
   imports: [
-    AuthModule,
-    TypeOrmModule.forFeature([
-      Chat,
-      Message,
-      ActiveChat
-    ])
+    TypeOrmModule.forFeature([Chat, Friendship]),
   ],
-  controllers: [ChatController],
-  providers: [ChatService, ChatGateway]
+  providers: [ChatGateway, ChatService],
+  controllers: [ChatController]
 })
 export class ChatModule { }

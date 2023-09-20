@@ -1,13 +1,17 @@
-import { Column, Entity, ManyToOne, PrimaryColumn } from "typeorm";
-import { FriendRequest_Status } from "../dto/createFriendRequest.dto";
+import { Chat } from "src/chat/entities/chat.entity";
+import { FriendRequest_Status } from "src/user/interfaces/interfaces";
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { User } from "./user.entity";
 
-@Entity('friends')
-export class FriendRequest {
-  @PrimaryColumn()
+@Entity('friendship')
+export class Friendship {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column()
   creatorId: string;
 
-  @PrimaryColumn()
+  @Column()
   receiverId: string;
 
   @ManyToOne(() => User, (user) => user.sentFriendRequests)
@@ -18,4 +22,7 @@ export class FriendRequest {
 
   @Column()
   status: FriendRequest_Status;
+
+  @OneToMany(() => Chat, (chat) => chat.room)
+  friendRooms: Chat[];
 }

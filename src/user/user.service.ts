@@ -1,148 +1,174 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { from, map, Observable, of, switchMap } from 'rxjs';
-import { FriendRequestStatus, FriendRequest_Status } from 'src/auth/dto/createFriendRequest.dto';
-import { FriendRequest } from 'src/auth/entities/friend.entity';
+import { Friendship } from 'src/auth/entities/friend.entity';
 import { User } from 'src/auth/entities/user.entity';
-import { DataSource, Like, Repository, UpdateResult } from 'typeorm';
+import { DataSource, ILike, Repository } from 'typeorm';
+import { v4 as uuid } from 'uuid';
+import { FriendRequest, FriendRequest_Status } from './interfaces/interfaces';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(FriendRequest)
-    private readonly friendRepository: Repository<FriendRequest>,
+    @InjectRepository(Friendship)
+    private readonly friendRepository: Repository<Friendship>,
   ) { }
 
-  findUserById(id: string): Observable<User> {
-    return from(
-      this.userRepository.findOne({
+  async findUserById(id: string) {
+    try {
+      const user: User = await this.userRepository.findOne({
         where: { id }
-      })
-    ).pipe(
-      map((user: User) => {
-        delete user.password;
-        return user;
-      })
-    )
+      });
+
+      delete user.password;
+      return user;
+
+    } catch (error) {
+      throw new InternalServerErrorException('id not found')
+    }
   }
 
-  findUserByName(name: string): Observable<User[]> {
-    return from(
-      this.userRepository.find({
-        where: { userName: Like(`%${name}%`) },
-        select: ['id', 'userName', 'email', 'imagePath'],
-      })
-    );
+  async findUserByName(name: string, user: User) {
+    const result = await this.userRepository
+      .createQueryBuilder("users")
+      .leftJoinAndSelect(Friendship, "friends",
+        `friends.receiverId = users.id
+         OR
+         friends.creatorId = users.id`)
+      .where(`
+             users.userName ILIKE :name
+             AND
+             users.userName != :myName`,
+        {
+          name: `%${name}%`,
+          myName: user.userName
+        })
+      .andWhere(`
+             (friends.creatorId IS NULL OR friends.creatorId != :userId)
+             AND
+             (friends.receiverId IS NULL OR friends.receiverId != :userId)
+                  `,
+        {
+          userId: user.id
+        })
+      .getMany()
+
+    return result
   }
 
-  sendFriendRequest(
-    receiverId: string, creator: User
-  ): Observable<FriendRequest | { error: string }> {
+  async sendFriendRequest(receiverId: string, creator: User) {
     if (receiverId === creator.id)
-      return of({ error: 'It is not possible to add yourself!' });
-    return this.findUserById(receiverId).pipe(
-      switchMap((receiver: User) => {
-        return this.hasRequestBeenSentOrReceived(creator, receiver).pipe(
-          switchMap((hasRequestBeenSentOrReceived: boolean) => {
-            if (hasRequestBeenSentOrReceived)
-              return of({ error: 'A friend request has already been sent of received to your account!' })
-            let friendRequest: FriendRequest = {
-              creatorId: creator.id,
-              receiverId: receiver.id,
-              creator: creator,
-              receiver: receiver,
-              status: 'pending'
-            }
-            return from(this.friendRepository.save(friendRequest))
-          })
-        )
-      })
-    )
+      return { error: 'It is not possible to add yourself!' };
+    const receiver = await this.findUserById(receiverId);
+    const requestSentReceived = await this.hasRequestBeenSentOrReceived(creator, receiver);
+    if (requestSentReceived)
+      return { error: 'A friend request has already been sent of received to your account!' };
+    let friendRequest: FriendRequest = {
+      creatorId: creator.id,
+      receiverId: receiver.id,
+      status: 'pending',
+    }
+    return await this.friendRepository.save(friendRequest);
   }
 
-  getFriendRequestStatus(
-    receiverId: string,
-    currentUser: User
-  ): Observable<FriendRequestStatus> {
-    return this.findUserById(receiverId).pipe(
-      switchMap((receiver: User) => {
-        return from(
-          this.friendRepository.findOne({
-            where:
-            {
-              creator: currentUser,
-              receiver
-            },
-          }),
-        );
-      }),
-      switchMap((friendRequest: FriendRequest) => {
-        return of({ status: friendRequest.status })
-      }),
-    );
+  async getFriendRequestStatus(receiverId: string, currentUser: User) {
+    try {
+      const receiver = await this.findUserById(receiverId);
+      const friendRequest = await this.friendRepository.findOne({
+        where:
+        {
+          creator: currentUser,
+          receiver
+        },
+      });
+      return { status: friendRequest.status }
+
+    } catch (error) {
+      throw new InternalServerErrorException(`You didn't send a friend request to this account`);
+    }
   }
 
-  respondToFriendRequest(
-    statusResponse: FriendRequest_Status,
-    friendRequestId: string,
-    req: User
-  ): Observable<FriendRequestStatus> {
-    return this.getFriendRequestUserById(friendRequestId, req).pipe(
-      switchMap((friendRequest: FriendRequest) => {
-        return from(this.friendRepository.save({
-          ...friendRequest,
-          status: statusResponse,
-        }))
-      })
-    )
+  async respondToFriendRequest(statusResponse: FriendRequest_Status, friendRequestId: string, req: User) {
+    const friendRequest = await this.getFriendRequestUserById(friendRequestId, req);
+    return await this.friendRepository.save({
+      ...friendRequest,
+      status: statusResponse
+    })
   }
 
-  getMyFriendRequests(user: User): Observable<FriendRequest[]> {
-    return from(this.friendRepository.find({
+  async receivedRequests(user: User) {
+    return await this.friendRepository.find({
       where: {
         receiver: user,
         status: 'pending'
       },
       relations: ['creator'],
       select: ['creator', 'status']
-    }))
+    });
   }
 
-  getMyFriends(user: User): Observable<User[]> {
-    return from(this.friendRepository.find({
-      where: {
-        receiver: user,
-        status: 'accepted',
-      },
-      relations: ['creator'],
-    })).pipe(map(users => (
-      users.map(user => user.creator)
-    ))
-    )
+  async getMyFriends(user: User) {
+    const friends = await this.friendRepository.find({
+      where: [
+        {
+          creator: user,
+          status: 'accepted'
+        },
+        {
+          receiver: user,
+          status: 'accepted'
+        }
+      ],
+      relations: ['creator', 'receiver'],
+    });
+
+    return friends.map(friend => {
+      if (friend.creatorId === user.id) {
+        return friend.receiver;
+      } else {
+        return friend.creator;
+      }
+    });
+
   }
 
-  private getFriendRequestUserById(friendRequestId: string, req: User): Observable<FriendRequest> {
-    return from(this.friendRepository.findOne({
+  async getFriendsRoom(friendId: string, user: User) {
+    const friend = await this.findUserById(friendId)
+    const relation = await this.friendRepository.findOne({
+      where: [
+        {
+          creator: user,
+          receiver: friend,
+          status: 'accepted'
+        },
+        {
+          creator: friend,
+          receiver: user,
+          status: 'accepted'
+        }
+      ],
+    });
+
+    return { room: relation.id };
+  }
+
+  private async getFriendRequestUserById(friendRequestId: string, req: User) {
+    return await this.friendRepository.findOne({
       where: { creatorId: friendRequestId, receiverId: req.id }
-    }))
+    })
   }
 
-  private hasRequestBeenSentOrReceived(creator: User, receiver: User): Observable<boolean> {
-    return from(this.friendRepository.findOne({
+  private async hasRequestBeenSentOrReceived(creator: User, receiver: User) {
+    const friendRequest = await this.friendRepository.findOne({
       where: [
         { creator, receiver },
         { creator: receiver, receiver: creator },
       ]
-    }),
-    ).pipe(
-      switchMap((friendRequest: FriendRequest) => {
-        if (!friendRequest)
-          return of(false);
-        return of(true);
-      })
-    );
+    });
+    if (!friendRequest)
+      return false;
+    return true;
   }
 
 }
