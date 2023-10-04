@@ -18,7 +18,7 @@ export class Chat {
   @Column('uuid')
   roomId: string;
 
-  @ManyToOne(() => Friendship, (friendRequest) => friendRequest.friendRooms)
+  @ManyToOne(() => Friendship, (friendRequest) => friendRequest.friendRooms, { onDelete: 'CASCADE' })
   room: Friendship;
 
 }

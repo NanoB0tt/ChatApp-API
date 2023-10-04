@@ -21,10 +21,10 @@ export class User {
   @Column({ nullable: true })
   imagePath: string;
 
-  @OneToMany(() => Friendship, (friendRequest) => friendRequest.creator)
+  @OneToMany(() => Friendship, (friendRequest) => friendRequest.creator, { onDelete: 'CASCADE' })
   sentFriendRequests: Friendship[];
 
-  @OneToMany(() => Friendship, (friendRequest) => friendRequest.receiver)
+  @OneToMany(() => Friendship, (friendRequest) => friendRequest.receiver, { onDelete: 'CASCADE' })
   receivedFriendRequests: Friendship[];
 
 }

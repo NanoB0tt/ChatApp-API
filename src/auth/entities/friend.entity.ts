@@ -14,15 +14,15 @@ export class Friendship {
   @Column()
   receiverId: string;
 
-  @ManyToOne(() => User, (user) => user.sentFriendRequests)
+  @ManyToOne(() => User, (user) => user.sentFriendRequests, { onDelete: 'CASCADE' })
   creator: User;
 
-  @ManyToOne(() => User, (user) => user.receivedFriendRequests)
+  @ManyToOne(() => User, (user) => user.receivedFriendRequests, { onDelete: 'CASCADE' })
   receiver: User;
 
   @Column()
   status: FriendRequest_Status;
 
-  @OneToMany(() => Chat, (chat) => chat.room)
+  @OneToMany(() => Chat, (chat) => chat.room, { onDelete: 'CASCADE' })
   friendRooms: Chat[];
 }
