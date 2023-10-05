@@ -7,10 +7,8 @@ import { ChatController } from './chat.controller';
 import { Friendship } from 'src/auth/entities/friend.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Chat, Friendship]),
-  ],
+  imports: [TypeOrmModule.forFeature([Chat, Friendship])],
   providers: [ChatGateway, ChatService],
-  controllers: [ChatController]
+  controllers: [ChatController],
 })
-export class ChatModule { }
+export class ChatModule {}

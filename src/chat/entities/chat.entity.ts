@@ -1,5 +1,11 @@
-import { Friendship } from "src/auth/entities/friend.entity";
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Friendship } from 'src/auth/entities/friend.entity';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity('chat')
 export class Chat {
@@ -18,7 +24,8 @@ export class Chat {
   @Column('uuid')
   roomId: string;
 
-  @ManyToOne(() => Friendship, (friendRequest) => friendRequest.friendRooms, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Friendship, (friendRequest) => friendRequest.friendRooms, {
+    onDelete: 'CASCADE',
+  })
   room: Friendship;
-
 }

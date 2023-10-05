@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { User } from 'src/auth/entities/user.entity';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
@@ -7,9 +16,7 @@ import { UserService } from './user.service';
 
 @Controller('user')
 export class UserController {
-  constructor(
-    private readonly userService: UserService
-  ) { }
+  constructor(private readonly userService: UserService) {}
 
   @UseGuards(JwtGuard)
   @Get(':userId')
@@ -19,10 +26,7 @@ export class UserController {
 
   @UseGuards(JwtGuard)
   @Get('search/friend/:userName')
-  findUserByName(
-    @Param('userName') userName: string,
-    @Req() req: Request
-  ) {
+  findUserByName(@Param('userName') userName: string, @Req() req: Request) {
     return this.userService.findUserByName(userName, req.user as User);
   }
 
@@ -30,18 +34,21 @@ export class UserController {
   @Post('friend-request/send/:receiverId')
   sendFriendRequest(
     @Param('receiverId') receiverId: string,
-    @Req() req: Request
+    @Req() req: Request,
   ) {
-    return this.userService.sendFriendRequest(receiverId, req.user as User)
+    return this.userService.sendFriendRequest(receiverId, req.user as User);
   }
 
   @UseGuards(JwtGuard)
   @Get('friend-request/status/:receiverId')
   getFriendRequestStatus(
     @Param('receiverId') receiverId: string,
-    @Req() req: Request
+    @Req() req: Request,
   ) {
-    return this.userService.getFriendRequestStatus(receiverId, req.user as User)
+    return this.userService.getFriendRequestStatus(
+      receiverId,
+      req.user as User,
+    );
   }
 
   @UseGuards(JwtGuard)
@@ -49,34 +56,30 @@ export class UserController {
   respondToFriendRequest(
     @Param('friendRequestId') friendRequestId: string,
     @Body() statusResponse: FriendRequestStatus,
-    @Req() req: Request
+    @Req() req: Request,
   ) {
-    return this.userService.respondToFriendRequest(statusResponse.status, friendRequestId, req.user as User);
+    return this.userService.respondToFriendRequest(
+      statusResponse.status,
+      friendRequestId,
+      req.user as User,
+    );
   }
 
   @UseGuards(JwtGuard)
   @Get('friend-request/me/received-requests')
-  getMyFriendRequests(
-    @Req() req: Request
-  ) {
-    return this.userService.receivedRequests(req.user as User)
+  getMyFriendRequests(@Req() req: Request) {
+    return this.userService.receivedRequests(req.user as User);
   }
 
   @UseGuards(JwtGuard)
   @Get('friend-request/me/friends')
-  getMyFriends(
-    @Req() req: Request
-  ) {
-    return this.userService.getMyFriends(req.user as User)
+  getMyFriends(@Req() req: Request) {
+    return this.userService.getMyFriends(req.user as User);
   }
 
   @UseGuards(JwtGuard)
   @Get('room/:friendId')
-  getFriendsRoom(
-    @Param('friendId') friendId: string,
-    @Req() req: Request
-  ) {
-    return this.userService.getFriendsRoom(friendId, req.user as User)
+  getFriendsRoom(@Param('friendId') friendId: string, @Req() req: Request) {
+    return this.userService.getFriendsRoom(friendId, req.user as User);
   }
-
 }

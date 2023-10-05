@@ -9,8 +9,8 @@ import { Repository } from 'typeorm';
 export class FilesService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>
-  ) { }
+    private readonly userRepository: Repository<User>,
+  ) {}
 
   getImage(imageName: string) {
     const path = join(__dirname, '../../images', imageName);

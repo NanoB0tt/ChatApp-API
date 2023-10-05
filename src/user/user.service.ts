@@ -5,8 +5,8 @@ import { Friendship } from 'src/auth/entities/friend.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { Repository } from 'typeorm';
 import { FriendRequest, FriendRequest_Status } from './interfaces/interfaces';
-import { readdir, unlink } from "fs";
-import { join } from "path";
+import { readdir, unlink } from 'fs';
+import { join } from 'path';
 
 @Injectable()
 export class UserService {
@@ -15,19 +15,18 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Friendship)
     private readonly friendRepository: Repository<Friendship>,
-  ) { }
+  ) {}
 
   async findUserById(id: string) {
     try {
       const user: User = await this.userRepository.findOne({
-        where: { id }
+        where: { id },
       });
 
       delete user.password;
       return user;
-
     } catch (error) {
-      throw new InternalServerErrorException('id not found')
+      throw new InternalServerErrorException('id not found');
     }
   }
 
@@ -50,23 +49,30 @@ export class UserService {
           ( "friendship"."creatorId" = $2
           AND
           "friendship"."status" = 'accepted')
-	      )`, [`%${name}%`, user.id]
-    )
-    return result
+	      )`,
+      [`%${name}%`, user.id],
+    );
+    return result;
   }
 
   async sendFriendRequest(receiverId: string, creator: User) {
     if (receiverId === creator.id)
       return { error: 'It is not possible to add yourself!' };
     const receiver = await this.findUserById(receiverId);
-    const requestSentReceived = await this.hasRequestBeenSentOrReceived(creator, receiver);
+    const requestSentReceived = await this.hasRequestBeenSentOrReceived(
+      creator,
+      receiver,
+    );
     if (requestSentReceived)
-      return { error: 'A friend request has already been sent of received to your account!' };
+      return {
+        error:
+          'A friend request has already been sent of received to your account!',
+      };
     let friendRequest: FriendRequest = {
       creatorId: creator.id,
       receiverId: receiver.id,
       status: 'pending',
-    }
+    };
     return await this.friendRepository.save(friendRequest);
   }
 
@@ -74,35 +80,42 @@ export class UserService {
     try {
       const receiver = await this.findUserById(receiverId);
       const friendRequest = await this.friendRepository.findOne({
-        where:
-        {
+        where: {
           creator: currentUser,
-          receiver
+          receiver,
         },
       });
-      return { status: friendRequest.status }
-
+      return { status: friendRequest.status };
     } catch (error) {
-      throw new InternalServerErrorException(`You didn't send a friend request to this account`);
+      throw new InternalServerErrorException(
+        `You didn't send a friend request to this account`,
+      );
     }
   }
 
-  async respondToFriendRequest(statusResponse: FriendRequest_Status, friendRequestId: string, req: User) {
-    const friendRequest = await this.getFriendRequestUserById(friendRequestId, req);
+  async respondToFriendRequest(
+    statusResponse: FriendRequest_Status,
+    friendRequestId: string,
+    req: User,
+  ) {
+    const friendRequest = await this.getFriendRequestUserById(
+      friendRequestId,
+      req,
+    );
     return await this.friendRepository.save({
       ...friendRequest,
-      status: statusResponse
-    })
+      status: statusResponse,
+    });
   }
 
   async receivedRequests(user: User) {
     return await this.friendRepository.find({
       where: {
         receiver: user,
-        status: 'pending'
+        status: 'pending',
       },
       relations: ['creator'],
-      select: ['creator', 'status']
+      select: ['creator', 'status'],
     });
   }
 
@@ -111,40 +124,39 @@ export class UserService {
       where: [
         {
           creator: user,
-          status: 'accepted'
+          status: 'accepted',
         },
         {
           receiver: user,
-          status: 'accepted'
-        }
+          status: 'accepted',
+        },
       ],
       relations: ['creator', 'receiver'],
     });
 
-    return friends.map(friend => {
+    return friends.map((friend) => {
       if (friend.creatorId === user.id) {
         return friend.receiver;
       } else {
         return friend.creator;
       }
     });
-
   }
 
   async getFriendsRoom(friendId: string, user: User) {
-    const friend = await this.findUserById(friendId)
+    const friend = await this.findUserById(friendId);
     const relation = await this.friendRepository.findOne({
       where: [
         {
           creator: user,
           receiver: friend,
-          status: 'accepted'
+          status: 'accepted',
         },
         {
           creator: friend,
           receiver: user,
-          status: 'accepted'
-        }
+          status: 'accepted',
+        },
       ],
     });
 
@@ -153,8 +165,8 @@ export class UserService {
 
   private async getFriendRequestUserById(friendRequestId: string, req: User) {
     return await this.friendRepository.findOne({
-      where: { creatorId: friendRequestId, receiverId: req.id }
-    })
+      where: { creatorId: friendRequestId, receiverId: req.id },
+    });
   }
 
   private async hasRequestBeenSentOrReceived(creator: User, receiver: User) {
@@ -162,10 +174,9 @@ export class UserService {
       where: [
         { creator, receiver },
         { creator: receiver, receiver: creator },
-      ]
+      ],
     });
-    if (!friendRequest)
-      return false;
+    if (!friendRequest) return false;
     return true;
   }
 
@@ -184,4 +195,3 @@ export class UserService {
     });
   }
 }
-

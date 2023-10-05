@@ -1,5 +1,5 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { Friendship } from "./friend.entity";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Friendship } from './friend.entity';
 
 @Entity('users')
 export class User {
@@ -21,10 +21,13 @@ export class User {
   @Column({ nullable: true })
   imagePath: string;
 
-  @OneToMany(() => Friendship, (friendRequest) => friendRequest.creator, { onDelete: 'CASCADE' })
+  @OneToMany(() => Friendship, (friendRequest) => friendRequest.creator, {
+    onDelete: 'CASCADE',
+  })
   sentFriendRequests: Friendship[];
 
-  @OneToMany(() => Friendship, (friendRequest) => friendRequest.receiver, { onDelete: 'CASCADE' })
+  @OneToMany(() => Friendship, (friendRequest) => friendRequest.receiver, {
+    onDelete: 'CASCADE',
+  })
   receivedFriendRequests: Friendship[];
-
 }

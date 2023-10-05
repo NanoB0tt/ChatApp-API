@@ -9,24 +9,23 @@ export class ChatService {
   constructor(
     @InjectRepository(Chat)
     private readonly chatRepository: Repository<Chat>,
-  ) { }
+  ) {}
 
   async addMessage({ room, message }, from: string) {
     const data = await this.chatRepository.save({
       roomId: room,
       message,
-      from
+      from,
     });
-    return getChatAdapter(data)
+    return getChatAdapter(data);
   }
 
   async getAllMessages(room: string) {
     const data = await this.chatRepository.find({
       where: {
-        roomId: room
+        roomId: room,
       },
-    })
-    return getChatAdapter(data)
+    });
+    return getChatAdapter(data);
   }
-
 }

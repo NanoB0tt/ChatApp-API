@@ -4,7 +4,7 @@ import { CreateUserDto, LoginUserDto } from './dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   @Post('register')
   register(@Body() user: CreateUserDto) {
@@ -13,6 +13,6 @@ export class AuthController {
 
   @Post('login')
   login(@Body() user: LoginUserDto) {
-    return this.authService.login(user)
+    return this.authService.login(user);
   }
 }
