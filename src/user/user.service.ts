@@ -5,6 +5,8 @@ import { Friendship } from 'src/auth/entities/friend.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { Repository } from 'typeorm';
 import { FriendRequest, FriendRequest_Status } from './interfaces/interfaces';
+import { readdir, unlink } from "fs";
+import { join } from "path";
 
 @Injectable()
 export class UserService {
@@ -30,30 +32,26 @@ export class UserService {
   }
 
   async findUserByName(name: string, user: User) {
-    const result = await this.userRepository
-      .createQueryBuilder("users")
-      .leftJoinAndSelect(Friendship, "friends",
-        `friends.receiverId = users.id
-         OR
-         friends.creatorId = users.id`)
-      .where(`
-             users.userName ILIKE :name
-             AND
-             users.userName != :myName`,
-        {
-          name: `%${name}%`,
-          myName: user.userName
-        })
-      .andWhere(`
-             ((friends.creatorId IS NULL) OR (friends.creatorId != :userId))
-             AND
-             ((friends.receiverId IS NULL) OR (friends.receiverId != :userId))
-                  `,
-        {
-          userId: user.id
-        })
-      .getMany()
-
+    const result = await this.userRepository.query(
+      `	SELECT * FROM users
+	      WHERE "users"."userName" ILIKE $1
+        AND "users"."id" != $2
+        AND "users"."id" NOT IN (
+	        SELECT CASE
+		        WHEN   "friendship"."creatorId" = $2 THEN "friendship"."receiverId"
+	          WHEN "friendship"."receiverId" = $2 THEN "friendship"."creatorId"
+	        END
+	        FROM friendship
+	        WHERE
+          ( "friendship"."receiverId" = $2
+          AND
+          "friendship"."status" = 'accepted')
+          OR
+          ( "friendship"."creatorId" = $2
+          AND
+          "friendship"."status" = 'accepted')
+	      )`, [`%${name}%`, user.id]
+    )
     return result
   }
 
@@ -172,8 +170,18 @@ export class UserService {
   }
 
   @Cron(CronExpression.EVERY_WEEKDAY)
-  handleDatabaseDelete() {
-    this.userRepository.query('DELETE FROM users')
+  async handleDatabaseDelete() {
+    this.userRepository.query('DELETE FROM users');
+    const directory = join(__dirname, '../../images');
+    readdir(directory, (err, files) => {
+      if (err) throw err;
+
+      for (const file of files) {
+        unlink(join(directory, file), (err) => {
+          if (err) throw err;
+        });
+      }
+    });
   }
 }
 
