@@ -11,7 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { User } from 'src/auth/entities/user.entity';
 import { Message } from 'src/user/interfaces/interfaces';
 
-@WebSocketGateway({ cors: true })
+@WebSocketGateway()
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
