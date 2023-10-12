@@ -27,4 +27,4 @@ import { ScheduleModule } from '@nestjs/schedule';
     ChatModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }
